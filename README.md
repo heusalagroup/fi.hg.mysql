@@ -2,7 +2,13 @@
 
 # @heusalagroup/fi.hg.mysql
 
-Lightweight PostgreSQL library written in TypeScript.
+Lightweight MySQL persister written in TypeScript.
+
+To use this persister, install following dependencies:
+
+```
+npm install --save mysql @types/mysql
+```
 
 See also [hgrs](https://github.com/heusalagroup/hgrs).
 

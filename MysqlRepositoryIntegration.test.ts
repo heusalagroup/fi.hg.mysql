@@ -46,9 +46,7 @@ export const INTEGRATION_TESTS_ENABLED : boolean = TEST_SCOPES.includes('integra
                 60*60*1000,
                 true,
                 MYSQL_CHARSET
-            ),
-            true,
-            true
+            )
         );
     });
 

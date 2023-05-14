@@ -9,6 +9,7 @@ import { setCrudRepositoryLogLevel } from "../core/data/types/CrudRepository";
 import { PersisterMetadataManagerImpl } from "../core/data/persisters/types/PersisterMetadataManagerImpl";
 import { MySqlPersister } from "./MySqlPersister";
 import { parseNonEmptyString } from "../core/types/String";
+import { MySqlEntityInsertQueryBuilder } from "../core/data/persisters/mysql/query/insert/MySqlEntityInsertQueryBuilder";
 
 export const TEST_SCOPES             : readonly string[] = (parseNonEmptyString(process?.env?.TEST_SCOPES) ?? '').split(/[,| :;+]+/);
 export const MYSQL_HOSTNAME          : string   = parseNonEmptyString(process?.env?.TEST_MYSQL_HOSTNAME)          ?? 'localhost';
@@ -46,9 +47,7 @@ export const INTEGRATION_TESTS_ENABLED : boolean = TEST_SCOPES.includes('integra
                 60*60*1000,
                 true,
                 MYSQL_CHARSET
-            ),
-            true,
-            true
+            )
         );
     });
 

@@ -182,7 +182,7 @@ export class MySqlPersister implements Persister {
         const { tableName, fields } = metadata;
         const builder = new MySqlEntityDeleteQueryBuilder();
         builder.setTablePrefix(this._tablePrefix);
-        builder.setFromTable(tableName);
+        builder.setTableName(tableName);
         if (where) {
             builder.setWhereFromQueryBuilder( builder.buildAnd(where, tableName, fields) );
         }
@@ -215,12 +215,12 @@ export class MySqlPersister implements Persister {
         builder.setGroupByColumn(mainIdColumnName);
         builder.includeEntityFields(tableName, fields, temporalProperties);
         if (sort) {
-            builder.setOrderBy(sort, tableName, fields);
+            builder.setOrderByTableFields(sort, tableName, fields);
         }
         builder.setOneToManyRelations(oneToManyRelations, this._metadataManager);
         builder.setManyToOneRelations(manyToOneRelations, this._metadataManager, fields);
 
-        const where = new MySqlAndChainBuilder();
+        const where = MySqlAndChainBuilder.create();
         where.setColumnEqualsByLastInsertId(builder.getTableNameWithPrefix(tableName), mainIdColumnName);
         builder.setWhereFromQueryBuilder(where);
 
@@ -253,7 +253,7 @@ export class MySqlPersister implements Persister {
         builder.setTablePrefix(this._tablePrefix);
         builder.setTableName(tableName);
         if (sort) {
-            builder.setOrderBy(sort, tableName, fields);
+            builder.setOrderByTableFields(sort, tableName, fields);
         }
         builder.setGroupByColumn(mainIdColumnName);
         builder.includeEntityFields(tableName, fields, temporalProperties);
@@ -288,7 +288,7 @@ export class MySqlPersister implements Persister {
         builder.setTablePrefix(this._tablePrefix);
         builder.setTableName(tableName);
         if (sort) {
-            builder.setOrderBy(sort, tableName, fields);
+            builder.setOrderByTableFields(sort, tableName, fields);
         }
         builder.setGroupByColumn(mainIdColumnName);
         builder.includeEntityFields(tableName, fields, temporalProperties);

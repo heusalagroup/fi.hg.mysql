@@ -4,8 +4,6 @@
 import { createPool, FieldInfo, MysqlError, Pool } from "mysql";
 import { map } from "../core/functions/map";
 import { reduce } from "../core/functions/reduce";
-import { filter } from "../core/functions/filter";
-import { has } from "../core/functions/has";
 import { EntityMetadata } from "../core/data/types/EntityMetadata";
 import { Persister } from "../core/data/types/Persister";
 import { RepositoryError } from "../core/data/types/RepositoryError";
@@ -19,12 +17,12 @@ import { LogLevel } from "../core/types/LogLevel";
 import { EntityField } from "../core/data/types/EntityField";
 import { PersisterMetadataManager } from "../core/data/persisters/types/PersisterMetadataManager";
 import { PersisterMetadataManagerImpl } from "../core/data/persisters/types/PersisterMetadataManagerImpl";
-import { EntityFieldType } from "../core/data/types/EntityFieldType";
-import { MySqlEntitySelectQueryBuilder } from "../core/data/persisters/mysql/builders/select/MySqlEntitySelectQueryBuilder";
-import { MySqlAndChainBuilder } from "../core/data/persisters/mysql/builders/formulas/MySqlAndChainBuilder";
+import { MySqlEntitySelectQueryBuilder } from "../core/data/persisters/mysql/query/select/MySqlEntitySelectQueryBuilder";
+import { MySqlAndChainBuilder } from "../core/data/persisters/mysql/query/formulas/MySqlAndChainBuilder";
 import { Sort } from "../core/data/Sort";
 import { Where } from "../core/data/Where";
-import { MySqlEntityDeleteQueryBuilder } from "../core/data/persisters/mysql/builders/delete/MySqlEntityDeleteQueryBuilder";
+import { MySqlEntityDeleteQueryBuilder } from "../core/data/persisters/mysql/query/delete/MySqlEntityDeleteQueryBuilder";
+import { MySqlEntityInsertQueryBuilder } from "../core/data/persisters/mysql/query/insert/MySqlEntityInsertQueryBuilder";
 
 export type QueryResultPair = [any, readonly FieldInfo[] | undefined];
 
@@ -131,7 +129,7 @@ export class MySqlPersister implements Persister {
         LOG.debug(`count: tableName = `, tableName, fields);
         const builder = MySqlEntitySelectQueryBuilder.create();
         builder.setTablePrefix(this._tablePrefix);
-        builder.setFromTable(tableName);
+        builder.setTableName(tableName);
         builder.includeFormulaByString('COUNT(*)', 'count');
         if (where !== undefined) {
             builder.setWhereFromQueryBuilder( builder.buildAnd(where, tableName, fields) )
@@ -162,7 +160,7 @@ export class MySqlPersister implements Persister {
         LOG.debug(`count: tableName = `, tableName, fields);
         const builder = MySqlEntitySelectQueryBuilder.create();
         builder.setTablePrefix(this._tablePrefix);
-        builder.setFromTable(tableName);
+        builder.setTableName(tableName);
         builder.includeFormulaByString('COUNT(*) >= 1', 'exists');
         builder.setWhereFromQueryBuilder( builder.buildAnd(where, tableName, fields) );
         const [queryString, queryValues] = builder.build();
@@ -213,7 +211,7 @@ export class MySqlPersister implements Persister {
         const mainIdColumnName : string = EntityUtils.getIdColumnName(metadata);
         const builder = MySqlEntitySelectQueryBuilder.create();
         builder.setTablePrefix(this._tablePrefix);
-        builder.setFromTable(tableName);
+        builder.setTableName(tableName);
         builder.setGroupByColumn(mainIdColumnName);
         builder.includeEntityFields(tableName, fields, temporalProperties);
         if (sort) {
@@ -223,7 +221,7 @@ export class MySqlPersister implements Persister {
         builder.setManyToOneRelations(manyToOneRelations, this._metadataManager, fields);
 
         const where = new MySqlAndChainBuilder();
-        where.setColumnEqualsByLastInsertId(builder.getCompleteTableName(tableName), mainIdColumnName);
+        where.setColumnEqualsByLastInsertId(builder.getTableNameWithPrefix(tableName), mainIdColumnName);
         builder.setWhereFromQueryBuilder(where);
 
         const [queryString, queryValues] = builder.build();
@@ -253,7 +251,7 @@ export class MySqlPersister implements Persister {
         const mainIdColumnName : string = EntityUtils.getIdColumnName(metadata);
         const builder = MySqlEntitySelectQueryBuilder.create();
         builder.setTablePrefix(this._tablePrefix);
-        builder.setFromTable(tableName);
+        builder.setTableName(tableName);
         if (sort) {
             builder.setOrderBy(sort, tableName, fields);
         }
@@ -288,7 +286,7 @@ export class MySqlPersister implements Persister {
         const mainIdColumnName : string = EntityUtils.getIdColumnName(metadata);
         const builder = MySqlEntitySelectQueryBuilder.create();
         builder.setTablePrefix(this._tablePrefix);
-        builder.setFromTable(tableName);
+        builder.setTableName(tableName);
         if (sort) {
             builder.setOrderBy(sort, tableName, fields);
         }
@@ -323,28 +321,22 @@ export class MySqlPersister implements Persister {
         if (!EntityUtils.areEntitiesSameType(entities)) {
             throw new TypeError(`Insert can only insert entities of the same time. There were some entities with different metadata than provided.`);
         }
-        const tableName : string = metadata.tableName;
-        const fields : readonly EntityField[] = filter(
-            metadata.fields,
-            (fld: EntityField) : boolean => !EntityUtils.isIdField(fld, metadata) && fld?.fieldType !== EntityFieldType.JOINED_ENTITY
-        );
-        const colNames : readonly string[] = map(fields, (col: EntityField) => col.columnName);
-        const insertValues : any[][] = map(
+        const { tableName, fields, temporalProperties, idPropertyName } = metadata;
+
+        const builder = MySqlEntityInsertQueryBuilder.create();
+        builder.setTablePrefix(this._tablePrefix);
+        builder.setTableName(tableName);
+
+        builder.appendEntityList(
             entities,
-            (item: T) : any[] => map(
-                fields,
-                (col: EntityField) : any => {
-                    const { propertyName } = col;
-                    return propertyName && has(item, propertyName) ? (item as any)[propertyName] : undefined;
-                }
-            )
+            fields,
+            temporalProperties,
+            [idPropertyName]
         );
-        const queryValues : [string, readonly string[], any[][]] = [
-            `${this._tablePrefix}${tableName}`,
-            colNames,
-            insertValues
-        ];
-        const [results] = await this._query('INSERT INTO ?? (??) VALUES ?', queryValues);
+
+        // builder.setEntities(metadata, entities);
+        const [ queryString, params ] = builder.build();
+        const [ results ] = await this._query(queryString, params);
         // Note! We cannot use `results?.insertId` since it is numeric even for BIGINT types and so is not safe. We'll just log it here for debugging purposes.
         const entityId = results?.insertId;
         if (!entityId) {

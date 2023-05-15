@@ -69,6 +69,20 @@ CREATE TABLE `prefix_cart_items` (
 ) ENGINE=MyISAM AUTO_INCREMENT=55 DEFAULT CHARSET=latin1;
 SET character_set_client = @saved_cs_client;
 
+--
+-- Table structure for table `prefix_type_test_json_data`
+--
+
+DROP TABLE IF EXISTS `prefix_type_test_json_data`;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+CREATE TABLE `prefix_type_test_json_data` (
+                                  `data_id` bigint(20) unsigned NOT NULL auto_increment,
+                                  `data_json` JSON NOT NULL,
+                                  PRIMARY KEY  (`data_id`)
+) ENGINE=MyISAM AUTO_INCREMENT=55 DEFAULT CHARSET=latin1;
+SET character_set_client = @saved_cs_client;
+
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
 /*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
 /*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;

@@ -24,6 +24,7 @@ import { MySqlEntityInsertQueryBuilder } from "../core/data/persisters/mysql/que
 import { MySqlEntityUpdateQueryBuilder } from "../core/data/persisters/mysql/query/update/MySqlEntityUpdateQueryBuilder";
 import { find } from "../core/functions/find";
 import { has } from "../core/functions/has";
+import { PersisterType } from "../core/data/persisters/types/PersisterType";
 
 export type QueryResultPair = [any, readonly FieldInfo[] | undefined];
 
@@ -100,6 +101,14 @@ export class MySqlPersister implements Persister {
             }
         );
         this._metadataManager = new PersisterMetadataManagerImpl();
+    }
+
+    /**
+     * @inheritDoc
+     * @see {@link Persister.getPersisterType}
+     */
+    public getPersisterType (): PersisterType {
+        return PersisterType.MYSQL;
     }
 
     /**

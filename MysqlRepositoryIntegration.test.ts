@@ -10,6 +10,7 @@ import { PersisterMetadataManagerImpl } from "../core/data/persisters/types/Pers
 import { MySqlPersister } from "./MySqlPersister";
 import { parseNonEmptyString } from "../core/types/String";
 import { MySqlEntityInsertQueryBuilder } from "../core/data/persisters/mysql/query/insert/MySqlEntityInsertQueryBuilder";
+import { PersisterType } from "../core/data/persisters/types/PersisterType";
 
 export const TEST_SCOPES             : readonly string[] = (parseNonEmptyString(process?.env?.TEST_SCOPES) ?? '').split(/[,| :;+]+/);
 export const MYSQL_HOSTNAME          : string   = parseNonEmptyString(process?.env?.TEST_MYSQL_HOSTNAME)          ?? 'localhost';
@@ -33,6 +34,7 @@ export const INTEGRATION_TESTS_ENABLED : boolean = TEST_SCOPES.includes('integra
 
     describe('MySQL', () => {
         allRepositoryTests(
+            PersisterType.MYSQL,
             () => new MySqlPersister(
                 MYSQL_HOSTNAME,
                 MYSQL_USERNAME,

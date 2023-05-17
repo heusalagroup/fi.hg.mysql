@@ -55,6 +55,21 @@ CREATE TABLE `prefix_carts` (
 SET character_set_client = @saved_cs_client;
 
 --
+-- Table structure for table `prefix_customers`
+--
+
+DROP TABLE IF EXISTS `prefix_contacts`;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+CREATE TABLE `prefix_contacts` (
+                                  `contact_id` bigint(20) unsigned NOT NULL auto_increment,
+                                  `cart_id` bigint(20) unsigned NOT NULL,
+                                  `contact_name` varchar(255) NOT NULL default '',
+                                  PRIMARY KEY  (`contact_id`)
+) ENGINE=MyISAM AUTO_INCREMENT=55 DEFAULT CHARSET=latin1;
+SET character_set_client = @saved_cs_client;
+
+--
 -- Table structure for table `prefix_cart_items`
 --
 

@@ -9,7 +9,7 @@ import { setCrudRepositoryLogLevel } from "../core/data/types/CrudRepository";
 import { PersisterMetadataManagerImpl } from "../core/data/persisters/types/PersisterMetadataManagerImpl";
 import { MySqlPersister } from "./MySqlPersister";
 import { parseNonEmptyString } from "../core/types/String";
-import { MySqlEntityInsertQueryBuilder } from "../core/data/persisters/mysql/query/insert/MySqlEntityInsertQueryBuilder";
+import { MySqlEntityInsertQueryBuilder } from "../core/data/query/mysql/insert/MySqlEntityInsertQueryBuilder";
 import { PersisterType } from "../core/data/persisters/types/PersisterType";
 
 export const TEST_SCOPES             : readonly string[] = (parseNonEmptyString(process?.env?.TEST_SCOPES) ?? '').split(/[,| :;+]+/);

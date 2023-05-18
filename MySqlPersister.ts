@@ -15,16 +15,19 @@ import { LogService } from "../core/LogService";
 import { LogLevel } from "../core/types/LogLevel";
 import { PersisterMetadataManager } from "../core/data/persisters/types/PersisterMetadataManager";
 import { PersisterMetadataManagerImpl } from "../core/data/persisters/types/PersisterMetadataManagerImpl";
-import { MySqlEntitySelectQueryBuilder } from "../core/data/persisters/mysql/query/select/MySqlEntitySelectQueryBuilder";
-import { MySqlAndChainBuilder } from "../core/data/persisters/mysql/query/formulas/MySqlAndChainBuilder";
+import { MySqlEntitySelectQueryBuilder } from "../core/data/query/mysql/select/MySqlEntitySelectQueryBuilder";
+import { MySqlAndChainBuilder } from "../core/data/query/mysql/formulas/MySqlAndChainBuilder";
 import { Sort } from "../core/data/Sort";
 import { Where } from "../core/data/Where";
-import { MySqlEntityDeleteQueryBuilder } from "../core/data/persisters/mysql/query/delete/MySqlEntityDeleteQueryBuilder";
-import { MySqlEntityInsertQueryBuilder } from "../core/data/persisters/mysql/query/insert/MySqlEntityInsertQueryBuilder";
-import { MySqlEntityUpdateQueryBuilder } from "../core/data/persisters/mysql/query/update/MySqlEntityUpdateQueryBuilder";
+import { MySqlEntityDeleteQueryBuilder } from "../core/data/query/mysql/delete/MySqlEntityDeleteQueryBuilder";
+import { MySqlEntityInsertQueryBuilder } from "../core/data/query/mysql/insert/MySqlEntityInsertQueryBuilder";
+import { MySqlEntityUpdateQueryBuilder } from "../core/data/query/mysql/update/MySqlEntityUpdateQueryBuilder";
 import { find } from "../core/functions/find";
 import { has } from "../core/functions/has";
 import { PersisterType } from "../core/data/persisters/types/PersisterType";
+import { EntityField } from "../core/data/types/EntityField";
+import { TemporalProperty } from "../core/data/types/TemporalProperty";
+import { TableFieldInfoCallback, TableFieldInfoResponse } from "../core/data/query/sql/select/EntitySelectQueryBuilder";
 
 export type QueryResultPair = [any, readonly FieldInfo[] | undefined];
 
@@ -50,8 +53,10 @@ export class MySqlPersister implements Persister {
     private readonly _tablePrefix : string;
     private readonly _queryTimeout : number | undefined;
     private readonly _metadataManager : PersisterMetadataManager;
+    private readonly _fetchTableInfo : TableFieldInfoCallback;
 
     private _pool : Pool | undefined;
+
 
     /**
      *
@@ -101,6 +106,13 @@ export class MySqlPersister implements Persister {
             }
         );
         this._metadataManager = new PersisterMetadataManagerImpl();
+        this._fetchTableInfo = (tableName: string) : TableFieldInfoResponse => {
+            const mappedMetadata = this._metadataManager.getMetadataByTable(tableName);
+            if (!mappedMetadata) throw new TypeError(`Could not find metadata for table "${tableName}"`);
+            const mappedFields = mappedMetadata.fields;
+            const temporalProperties = mappedMetadata.temporalProperties;
+            return [mappedFields, temporalProperties];
+        };
     }
 
     /**
@@ -233,8 +245,8 @@ export class MySqlPersister implements Persister {
         if (sort) {
             builder.setOrderByTableFields(sort, tableName, fields);
         }
-        builder.setOneToManyRelations(oneToManyRelations, this._metadataManager);
-        builder.setManyToOneRelations(manyToOneRelations, this._metadataManager, fields);
+        builder.setOneToManyRelations(oneToManyRelations, this._fetchTableInfo);
+        builder.setManyToOneRelations(manyToOneRelations, this._fetchTableInfo, fields);
 
         const where = MySqlAndChainBuilder.create();
         where.setColumnEqualsByLastInsertId(builder.getTableNameWithPrefix(tableName), mainIdColumnName);
@@ -273,8 +285,8 @@ export class MySqlPersister implements Persister {
         }
         builder.setGroupByColumn(mainIdColumnName);
         builder.includeEntityFields(tableName, fields, temporalProperties);
-        builder.setOneToManyRelations(oneToManyRelations, this._metadataManager);
-        builder.setManyToOneRelations(manyToOneRelations, this._metadataManager, fields);
+        builder.setOneToManyRelations(oneToManyRelations, this._fetchTableInfo);
+        builder.setManyToOneRelations(manyToOneRelations, this._fetchTableInfo, fields);
         if (where) {
             builder.setWhereFromQueryBuilder( builder.buildAnd(where, tableName, fields, temporalProperties) );
         }
@@ -308,8 +320,8 @@ export class MySqlPersister implements Persister {
         }
         builder.setGroupByColumn(mainIdColumnName);
         builder.includeEntityFields(tableName, fields, temporalProperties);
-        builder.setOneToManyRelations(oneToManyRelations, this._metadataManager);
-        builder.setManyToOneRelations(manyToOneRelations, this._metadataManager, fields);
+        builder.setOneToManyRelations(oneToManyRelations, this._fetchTableInfo);
+        builder.setManyToOneRelations(manyToOneRelations, this._fetchTableInfo, fields);
         if (where !== undefined) {
             builder.setWhereFromQueryBuilder( builder.buildAnd(where, tableName, fields, temporalProperties) )
         }

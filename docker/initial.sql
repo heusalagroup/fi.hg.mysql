@@ -21,6 +21,7 @@ CREATE TABLE `prefix_foos` (
                                   `foo_id` bigint(20) unsigned NOT NULL auto_increment,
                                   `foo_name` varchar(255) NOT NULL default '',
                                   `foo_date` TIMESTAMP NOT NULL default CURRENT_TIMESTAMP,
+                                  `non_updatable` varchar(255) NOT NULL default '',
                                   PRIMARY KEY  (`foo_id`)
 ) ENGINE=MyISAM AUTO_INCREMENT=55 DEFAULT CHARSET=latin1;
 SET character_set_client = @saved_cs_client;

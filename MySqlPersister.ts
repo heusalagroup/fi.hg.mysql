@@ -28,6 +28,9 @@ import { PersisterType } from "../core/data/persisters/types/PersisterType";
 import { EntityField } from "../core/data/types/EntityField";
 import { TemporalProperty } from "../core/data/types/TemporalProperty";
 import { TableFieldInfoCallback, TableFieldInfoResponse } from "../core/data/query/sql/select/EntitySelectQueryBuilder";
+import { PersisterEntityManager } from "../core/data/persisters/types/PersisterEntityManager";
+import { PersisterEntityManagerImpl } from "../core/data/persisters/types/PersisterEntityManagerImpl";
+import { KeyValuePairs } from "../core/data/types/KeyValuePairs";
 
 export type QueryResultPair = [any, readonly FieldInfo[] | undefined];
 
@@ -53,6 +56,7 @@ export class MySqlPersister implements Persister {
     private readonly _tablePrefix : string;
     private readonly _queryTimeout : number | undefined;
     private readonly _metadataManager : PersisterMetadataManager;
+    private readonly _entityManager : PersisterEntityManager;
     private readonly _fetchTableInfo : TableFieldInfoCallback;
 
     private _pool : Pool | undefined;
@@ -106,6 +110,7 @@ export class MySqlPersister implements Persister {
             }
         );
         this._metadataManager = new PersisterMetadataManagerImpl();
+        this._entityManager = PersisterEntityManagerImpl.create();
         this._fetchTableInfo = (tableName: string) : TableFieldInfoResponse => {
             const mappedMetadata = this._metadataManager.getMetadataByTable(tableName);
             if (!mappedMetadata) throw new TypeError(`Could not find metadata for table "${tableName}"`);
@@ -256,7 +261,7 @@ export class MySqlPersister implements Persister {
 
         const [results] = await this._query(queryString, queryValues);
         LOG.debug(`findByIdLastInsertId: results = `, results);
-        const entity = results.length >= 1 && results[0] ? EntityUtils.toEntity<T, ID>(results[0], metadata, this._metadataManager) : undefined;
+        const entity = results.length >= 1 && results[0] ? this._toEntity<T, ID>(results[0], metadata) : undefined;
         if ( entity !== undefined && !isEntity(entity) ) {
             throw new TypeError(`Could not create entity correctly`);
         }
@@ -295,7 +300,7 @@ export class MySqlPersister implements Persister {
 
         const [results] = await this._query(queryString, queryValues);
         LOG.debug(`findAll: results = `, results);
-        return map(results, (row: any) => EntityUtils.toEntity<T, ID>(row, metadata, this._metadataManager));
+        return map(results, (row: any) => this._toEntity<T, ID>(row, metadata));
     }
 
     /**
@@ -327,7 +332,7 @@ export class MySqlPersister implements Persister {
         }
         const [queryString, queryValues] = builder.build();
         const [results] = await this._query(queryString, queryValues);
-        return results.length >= 1 && results[0] ? EntityUtils.toEntity<T, ID>(results[0], metadata, this._metadataManager) : undefined;
+        return results.length >= 1 && results[0] ? this._toEntity<T, ID>(results[0], metadata) : undefined;
     }
 
     /**
@@ -390,9 +395,26 @@ export class MySqlPersister implements Persister {
         if (!idField) throw new TypeError(`Could not find id field using property "${idPropertyName}"`);
         const idColumnName = idField.columnName;
         if (!idColumnName) throw new TypeError(`Could not find id column using property "${idPropertyName}"`);
-
         const entityId = has(entity,idPropertyName) ? (entity as any)[idPropertyName] : undefined;
         if (!entityId) throw new TypeError(`Could not find entity id column using property "${idPropertyName}"`);
+
+        const updateFields = this._entityManager.getChangedFields(
+            entity,
+            fields
+        );
+
+        if (updateFields.length === 0) {
+            LOG.debug(`Entity did not any updatable properties changed. Saved nothing.`);
+            const item : T | undefined = await this.findBy(
+                metadata,
+                Where.propertyEquals(idPropertyName, entityId),
+                Sort.by(idPropertyName)
+            );
+            if (!item) {
+                throw new TypeError(`Entity was not stored in this persister for ID: ${entityId}`);
+            }
+            return item;
+        }
 
         const builder = MySqlEntityUpdateQueryBuilder.create();
         builder.setTablePrefix(this._tablePrefix);
@@ -400,7 +422,7 @@ export class MySqlPersister implements Persister {
 
         builder.appendEntity(
             entity,
-            fields,
+            updateFields,
             temporalProperties,
             [idPropertyName]
         );
@@ -461,6 +483,15 @@ export class MySqlPersister implements Persister {
             LOG.debug(`Query failed: `, query, values);
             throw TypeError(`Query failed: "${query}": ${err}`);
         }
+    }
+
+    private _toEntity<T extends Entity, ID extends EntityIdTypes> (
+        row      : KeyValuePairs,
+        metadata : EntityMetadata
+    ) : T {
+        const entity = EntityUtils.toEntity<T, ID>(row, metadata, this._metadataManager);
+        this._entityManager.saveLastEntityState(entity);
+        return entity;
     }
 
 }

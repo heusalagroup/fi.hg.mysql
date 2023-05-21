@@ -23,7 +23,7 @@ CREATE TABLE `prefix_foos` (
                                   `foo_date` TIMESTAMP NOT NULL default CURRENT_TIMESTAMP,
                                   `non_updatable` varchar(255) NOT NULL default '',
                                   PRIMARY KEY  (`foo_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=55 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=55 DEFAULT CHARSET=latin1;
 SET character_set_client = @saved_cs_client;
 
 --
@@ -38,7 +38,7 @@ CREATE TABLE `prefix_bars` (
                                   `bar_name` varchar(255) NOT NULL default '',
                                   `bar_date` TIMESTAMP NOT NULL default CURRENT_TIMESTAMP,
                                   PRIMARY KEY  (`bar_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=55 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=55 DEFAULT CHARSET=latin1;
 SET character_set_client = @saved_cs_client;
 
 --
@@ -52,7 +52,7 @@ CREATE TABLE `prefix_carts` (
                                   `cart_id` bigint(20) unsigned NOT NULL auto_increment,
                                   `cart_name` varchar(255) NOT NULL default '',
                                   PRIMARY KEY  (`cart_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=55 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=55 DEFAULT CHARSET=latin1;
 SET character_set_client = @saved_cs_client;
 
 --
@@ -67,7 +67,7 @@ CREATE TABLE `prefix_contacts` (
                                   `cart_id` bigint(20) unsigned NOT NULL,
                                   `contact_name` varchar(255) NOT NULL default '',
                                   PRIMARY KEY  (`contact_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=55 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=55 DEFAULT CHARSET=latin1;
 SET character_set_client = @saved_cs_client;
 
 --
@@ -82,7 +82,7 @@ CREATE TABLE `prefix_cart_items` (
                                   `cart_id` bigint(20) unsigned NOT NULL,
                                   `cart_item_name` varchar(255) NOT NULL default '',
                                   PRIMARY KEY  (`cart_item_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=55 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=55 DEFAULT CHARSET=latin1;
 SET character_set_client = @saved_cs_client;
 
 --
@@ -99,7 +99,7 @@ CREATE TABLE `prefix_type_test_json_data` (
                                   `data_id` bigint(20) unsigned NOT NULL auto_increment,
                                   `data_json` JSON NOT NULL,
                                   PRIMARY KEY  (`data_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=55 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=55 DEFAULT CHARSET=latin1;
 SET character_set_client = @saved_cs_client;
 
 --
@@ -115,7 +115,7 @@ CREATE TABLE `prefix_type_test_jsonb_data` (
                                   `data_id` bigint(20) unsigned NOT NULL auto_increment,
                                   `data_json` JSON NOT NULL,
                                   PRIMARY KEY  (`data_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=55 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=55 DEFAULT CHARSET=latin1;
 SET character_set_client = @saved_cs_client;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;

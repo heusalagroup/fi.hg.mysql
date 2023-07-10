@@ -32,6 +32,8 @@ import { KeyValuePairs } from "../core/data/types/KeyValuePairs";
 import { EntityCallbackUtils } from "../core/data/utils/EntityCallbackUtils";
 import { EntityCallbackType } from "../core/data/types/EntityCallbackType";
 
+export const GROUP_CONCAT_MAX_LEN = 1073741824;
+
 export type QueryResultPair = [any, readonly FieldInfo[] | undefined];
 
 const LOG = LogService.createLogger('MySqlPersister');
@@ -61,6 +63,8 @@ export class MySqlPersister implements Persister {
 
     private _pool : Pool | undefined;
 
+    private readonly _groupConcatMaxLen : number;
+
     /**
      *
      * @param host
@@ -76,6 +80,7 @@ export class MySqlPersister implements Persister {
      * @param queryTimeout Milliseconds
      * @param waitForConnections
      * @param charset Connection charset. Defaults to UTF8_GENERAL_CI
+     * @param groupConcatMaxLen Maximum length for GROUP_CONCAT()
      */
     public constructor (
         host: string,
@@ -90,10 +95,12 @@ export class MySqlPersister implements Persister {
         timeout : number = 60*60*1000,
         queryTimeout : number | undefined = 60*60*1000,
         waitForConnections : boolean = true,
-        charset : MySqlCharset | string = MySqlCharset.UTF8_GENERAL_CI
+        charset : MySqlCharset | string = MySqlCharset.UTF8_GENERAL_CI,
+        groupConcatMaxLen : number = GROUP_CONCAT_MAX_LEN
     ) {
         this._tablePrefix = tablePrefix;
         this._queryTimeout = queryTimeout;
+        this._groupConcatMaxLen = groupConcatMaxLen;
         this._pool = createPool(
             {
                 connectionLimit,
@@ -248,7 +255,6 @@ export class MySqlPersister implements Persister {
         );
     }
 
-
     protected async _transaction (callback: (connection : PoolConnection) => Promise<any>) {
         if (!this._pool) throw new TypeError(`The pool was not initialized`);
         let connection : PoolConnection | undefined = undefined;
@@ -256,6 +262,7 @@ export class MySqlPersister implements Persister {
         try {
             connection = await this._getConnection();
             await this._beginTransaction(connection);
+            await this._setGroupConcatMaxLen(connection, this._groupConcatMaxLen);
             returnValue = await callback(connection);
             await this._commitTransaction(connection);
         } catch (err) {
@@ -277,6 +284,10 @@ export class MySqlPersister implements Persister {
             }
         }
         return returnValue;
+    }
+
+    protected async _setGroupConcatMaxLen (connection : PoolConnection, value : number) : Promise<void> {
+        await this._query(connection,'SET SESSION group_concat_max_len = ?', [value]);
     }
 
     protected async _beginTransaction (connection : PoolConnection) : Promise<void> {

@@ -7,7 +7,7 @@ import { EntityMetadata } from "../core/data/types/EntityMetadata";
 import { Persister } from "../core/data/types/Persister";
 import { RepositoryError } from "../core/data/types/RepositoryError";
 import { RepositoryEntityError } from "../core/data/types/RepositoryEntityError";
-import { Entity, EntityIdTypes, isEntity } from "../core/data/Entity";
+import { Entity, isEntity } from "../core/data/Entity";
 import { EntityUtils } from "../core/data/utils/EntityUtils";
 import { MySqlCharset } from "../core/data/persisters/mysql/types/MySqlCharset";
 import { isArray } from "../core/types/Array";
@@ -89,6 +89,7 @@ export class MySqlPersister implements Persister {
         database: string,
         tablePrefix: string = '',
         connectionLimit: number = 100,
+        // @ts-ignore @todo Check why queueLimit not used
         queueLimit: number = 0,
         acquireTimeout: number = 60*60*1000,
         connectTimeout: number = 60*60*1000,
@@ -158,8 +159,7 @@ export class MySqlPersister implements Persister {
      * @inheritDoc
      * @see {@link Persister.count}
      */
-    public async count<T extends Entity,
-        ID extends EntityIdTypes>(
+    public async count (
         metadata : EntityMetadata,
         where    : Where | undefined,
     ): Promise<number> {
@@ -172,10 +172,7 @@ export class MySqlPersister implements Persister {
      * @inheritDoc
      * @see {@link Persister.existsBy}
      */
-    public async existsBy<
-        T extends Entity,
-        ID extends EntityIdTypes
-    >(
+    public async existsBy (
         metadata : EntityMetadata,
         where    : Where,
     ): Promise<boolean> {
@@ -188,7 +185,7 @@ export class MySqlPersister implements Persister {
      * @inheritDoc
      * @see {@link Persister.deleteAll}
      */
-    public async deleteAll<T extends Entity, ID extends EntityIdTypes>(
+    public async deleteAll (
         metadata : EntityMetadata,
         where    : Where | undefined,
     ): Promise<void> {
@@ -201,8 +198,7 @@ export class MySqlPersister implements Persister {
      * @inheritDoc
      * @see {@link Persister.findAll}
      */
-    public async findAll<T extends Entity,
-        ID extends EntityIdTypes>(
+    public async findAll<T extends Entity>(
         metadata : EntityMetadata,
         where    : Where | undefined,
         sort     : Sort | undefined
@@ -217,8 +213,7 @@ export class MySqlPersister implements Persister {
      * @see {@link Persister.findBy}
      */
     public async findBy<
-        T extends Entity,
-        ID extends EntityIdTypes
+        T extends Entity
     > (
         metadata : EntityMetadata,
         where    : Where,
@@ -233,7 +228,7 @@ export class MySqlPersister implements Persister {
      * @inheritDoc
      * @see {@link Persister.insert}
      */
-    public async insert<T extends Entity, ID extends EntityIdTypes>(
+    public async insert<T extends Entity>(
         metadata: EntityMetadata,
         entities: T | readonly T[],
     ): Promise<T> {
@@ -246,7 +241,7 @@ export class MySqlPersister implements Persister {
      * @inheritDoc
      * @see {@link Persister.update}
      */
-    public async update<T extends Entity, ID extends EntityIdTypes>(
+    public async update<T extends Entity>(
         metadata: EntityMetadata,
         entity: T,
     ): Promise<T> {
@@ -344,8 +339,7 @@ export class MySqlPersister implements Persister {
      * @inheritDoc
      * @see {@link Persister.count}
      */
-    protected async _count<T extends Entity,
-        ID extends EntityIdTypes>(
+    protected async _count (
         connection : PoolConnection,
         metadata : EntityMetadata,
         where    : Where | undefined,
@@ -369,10 +363,7 @@ export class MySqlPersister implements Persister {
         return results[0].count;
     }
 
-    protected async _existsBy<
-        T extends Entity,
-        ID extends EntityIdTypes
-    >(
+    protected async _existsBy (
         connection : PoolConnection,
         metadata : EntityMetadata,
         where    : Where,
@@ -394,7 +385,7 @@ export class MySqlPersister implements Persister {
         return !!results[0].exists;
     }
 
-    protected async _deleteAll<T extends Entity, ID extends EntityIdTypes>(
+    protected async _deleteAll<T extends Entity>(
         connection : PoolConnection,
         metadata : EntityMetadata,
         where    : Where | undefined,
@@ -406,7 +397,7 @@ export class MySqlPersister implements Persister {
 
         if (hasPreRemoveCallbacks || hasPostRemoveCallbacks) {
 
-            entities = await this._findAll<T, ID>(connection, metadata, where, undefined);
+            entities = await this._findAll<T>(connection, metadata, where, undefined);
 
             if ( hasPreRemoveCallbacks && entities?.length ) {
                 await EntityCallbackUtils.runPreRemoveCallbacks(
@@ -469,8 +460,7 @@ export class MySqlPersister implements Persister {
      * @see {@link MySqlPersister.insert}
      */
     protected async _findByLastInsertId<
-        T extends Entity,
-        ID extends EntityIdTypes
+        T extends Entity
     >(
         connection : PoolConnection,
         metadata : EntityMetadata,
@@ -500,15 +490,14 @@ export class MySqlPersister implements Persister {
 
         const [results] = await this._query(connection, queryString, queryValues);
         LOG.debug(`findByIdLastInsertId: results = `, results);
-        const entity = results.length >= 1 && results[0] ? this._toEntity<T, ID>(results[0], metadata) : undefined;
+        const entity = results.length >= 1 && results[0] ? this._toEntity<T>(results[0], metadata) : undefined;
         if ( entity !== undefined && !isEntity(entity) ) {
             throw new TypeError(`Could not create entity correctly`);
         }
         return entity;
     }
 
-    protected async _findAll<T extends Entity,
-        ID extends EntityIdTypes>(
+    protected async _findAll<T extends Entity>(
         connection : PoolConnection,
         metadata : EntityMetadata,
         where    : Where | undefined,
@@ -534,7 +523,7 @@ export class MySqlPersister implements Persister {
         const [queryString, queryValues] = builder.build();
         const [results] = await this._query(connection, queryString, queryValues);
         LOG.debug(`findAll: results = `, results);
-        const loadedList = map(results, (row: any) => this._toEntity<T, ID>(row, metadata));
+        const loadedList = map(results, (row: any) => this._toEntity<T>(row, metadata));
 
         if (loadedList?.length) {
             await EntityCallbackUtils.runPostLoadCallbacks(
@@ -547,10 +536,7 @@ export class MySqlPersister implements Persister {
 
     }
 
-    protected async _findBy<
-        T extends Entity,
-        ID extends EntityIdTypes
-    > (
+    protected async _findBy<T extends Entity> (
         connection : PoolConnection,
         metadata : EntityMetadata,
         where    : Where,
@@ -573,7 +559,7 @@ export class MySqlPersister implements Persister {
         }
         const [queryString, queryValues] = builder.build();
         const [results] = await this._query(connection, queryString, queryValues);
-        const loadedEntity = results.length >= 1 && results[0] ? this._toEntity<T, ID>(results[0], metadata) : undefined;
+        const loadedEntity = results.length >= 1 && results[0] ? this._toEntity<T>(results[0], metadata) : undefined;
         if (loadedEntity) {
             await EntityCallbackUtils.runPostLoadCallbacks(
                 [loadedEntity],
@@ -583,7 +569,7 @@ export class MySqlPersister implements Persister {
         return loadedEntity;
     }
 
-    protected async _insert<T extends Entity, ID extends EntityIdTypes>(
+    protected async _insert<T extends Entity>(
         connection : PoolConnection,
         metadata: EntityMetadata,
         entities: T | readonly T[],
@@ -645,7 +631,7 @@ export class MySqlPersister implements Persister {
     }
 
 
-    protected async _update<T extends Entity, ID extends EntityIdTypes>(
+    protected async _update<T extends Entity>(
         connection : PoolConnection,
         metadata: EntityMetadata,
         entity: T,
@@ -767,11 +753,11 @@ export class MySqlPersister implements Persister {
         }
     }
 
-    protected _toEntity<T extends Entity, ID extends EntityIdTypes> (
+    protected _toEntity<T extends Entity> (
         row      : KeyValuePairs,
         metadata : EntityMetadata
     ) : T {
-        const entity = EntityUtils.toEntity<T, ID>(row, metadata, this._metadataManager);
+        const entity = EntityUtils.toEntity<T>(row, metadata, this._metadataManager);
         this._entityManager.saveLastEntityState(entity);
         return entity;
     }
